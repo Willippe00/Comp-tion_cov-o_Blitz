@@ -1,3 +1,4 @@
+import game_message
 from game_message import *
 from actions import *
 import random
@@ -47,7 +48,7 @@ class Bot:
         Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
         """
 
-        VitesseMissile = game_message.constants.ship.stations.turretInfos.rocketSpeed
+
         actions = []
 
         team_id = game_message.currentTeamId
@@ -95,9 +96,9 @@ class Bot:
 
         postion = self.AimBot(turret_id)
 
-    def AimBot(self, AsteroideCible: GameMessage.debris, game_message: GameMessage, turret_id):
-            diffVitesse = self.soustractionVecteur(AsteroideCible.velocity, self.volicityApproxyMissil(AsteroideCible))
-            diffPosition = self.soustractionVecteur(self.PosCanon, AsteroideCible.position)
+    def AimBot(self, AsteroideCible : Debris, game_message: GameMessage, turret_id):
+            diffVitesse = self.soustractionVecteur(AsteroideCible.velocity, self.volicityApproxyMissil(AsteroideCible, game_message, turret_id))
+            diffPosition = self.soustractionVecteur(self.Turret_Station_Position(game_message, game_message.currentTeamId, turret_id), AsteroideCible.position)
             TempsColision = self.produitScalaire(diffPosition, diffVitesse) / self.produitScalaire(diffVitesse,
                                                                                                    diffVitesse)
 
@@ -124,21 +125,23 @@ class Bot:
     def multiplicationVecteur(self, v, scalaire):
         return Vector(v.x * scalaire, v.y * scalaire)
 
-    def volicityApproxyMissil(self, AsteroideCible: GameMessage.debris):
+    def volicityApproxyMissil(self, AsteroideCible: Debris, game_message: GameMessage, turet_id):
         positionEstimee = AsteroideCible.position
 
         for _ in range(70):  # 10 itérations pour convergence (ajuster si nécessaire)
-            vecteur_vitesse_missile = self.volicityApproxyMissil_vers_position(positionEstimee)
-            delta_temps = self.tempsImpact(positionEstimee, self.PosCanon, self.norme(vecteur_vitesse_missile))
+            vecteur_vitesse_missile = self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
+            delta_temps = self.tempsImpact(positionEstimee, self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id), self.norme(vecteur_vitesse_missile))
             positionEstimee = self.estimerPosition(AsteroideCible.position, AsteroideCible.velocity, delta_temps)
-        return self.volicityApproxyMissil_vers_position(positionEstimee)
+        return self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
 
-    def volicityApproxyMissil_vers_position(self, position):
+    def volicityApproxyMissil_vers_position(self, position, game_message: GameMessage, turet_id):
+
+        VitesseMissile = game_message.constants.ship.stations.turretInfos[self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id)].rocketSpeed
         """Version originale de la fonction pour obtenir la vélocité du missile vers une position donnée."""
-        VecteurDirection = self.soustractionVecteur(position, self.PosCanon)
+        VecteurDirection = self.soustractionVecteur(position, self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id))
         longueur = self.norme(VecteurDirection)
         VecteurUnitaire = Vector(VecteurDirection.x / longueur, VecteurDirection.y / longueur)
-        return Vector(self.VitesseMissile * VecteurUnitaire.x, self.VitesseMissile * VecteurUnitaire.y)
+        return Vector(VitesseMissile * VecteurUnitaire.x, VitesseMissile * VecteurUnitaire.y)
 
     def tempsImpact(self, position_cible, position_lanceur, vitesse_missile):
         """Estime le temps nécessaire pour que le missile atteigne la cible."""
