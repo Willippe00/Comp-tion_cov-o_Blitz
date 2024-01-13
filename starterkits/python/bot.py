@@ -7,16 +7,29 @@ class Bot:
     def __init__(self):
         print("Initializing your super mega duper bot")
 
-    def Interest_Debris(self, target: Debris):
+    def interest_debris(self, target: Debris):
 
         if target.debrisType == "LARGE":
-            interest = 3
-        elif target.debrisType == "MEDIUM":
-            interest = 2
-        elif target.debrisType == "SMALL":
-            interest = 1
-        else:
             interest = 0
+        elif target.debrisType == "MEDIUM":
+            interest = 1
+        elif target.debrisType == "SMALL":
+            interest = 2
+        else:
+            interest = 3
+
+        return interest
+
+    def interest_ship(self, target: Ship):
+
+        if target.currentShield < 0:
+            interest = 0
+        elif target.currentShield < 0.25:
+            interest = 1
+        elif target.currentShield < 0.5:
+            interest = 2
+        else:
+            interest = 3
 
         return interest
 
