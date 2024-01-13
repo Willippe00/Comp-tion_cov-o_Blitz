@@ -85,6 +85,9 @@ class Bot:
                         return specific_turret.worldPosition
         return None
 
+
+
+
     def get_next_move(self, game_message: GameMessage):
         """
         Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
@@ -107,6 +110,7 @@ class Bot:
 
         # Now crew members at stations should do something!
         operatedTurretStations = [station for station in my_ship.stations.turrets if station.operator is not None]
+        print("action")
         for turret_station in operatedTurretStations:
             possible_actions = [
                 # Charge the turret.
@@ -136,7 +140,6 @@ class Bot:
 
     def look_Target(self, turret_id):
 
-        postion = self.AimBot(turret_id)
 
     def AimBot(self, AsteroideCible: Debris, game_message: GameMessage, turret_id):
         diffVitesse = self.soustractionVecteur(AsteroideCible.velocity,
@@ -199,3 +202,10 @@ class Bot:
         """Estime la nouvelle position de l'astéroïde après un certain temps."""
         return Vector(positionAsteroide.x + vitesseAsteroide.x * delta_temps,
                       positionAsteroide.y + vitesseAsteroide.y * delta_temps)
+
+    def get_my_ship(game_message: GameMessage) -> Optional[Ship]:
+        current_team_id = game_message.currentTeamId
+        for team_id, ship in game_message.ships.items():
+            if team_id == current_team_id:
+                return ship
+        return None
