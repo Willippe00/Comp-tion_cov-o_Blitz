@@ -36,7 +36,7 @@ class Bot:
             return 0
 
         elif target.debrisType == "MEDIUM" and self.is_in_same_quadrant(target, ship, game_message):
-            return 3
+            return 4
         elif target.debrisType == "LARGE":
             return 6
         else:
@@ -47,10 +47,10 @@ class Bot:
 
         if target.currentShield < 0:
             return 1
-        elif target.currentShield < 0.25:
+        elif target.currentShield < 50:
             return 2
-        elif target.currentShield < 0.5:
-            return 4
+        elif target.currentShield < 100:
+            return 3
         else:
             return 5
 
