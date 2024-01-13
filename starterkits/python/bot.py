@@ -7,31 +7,44 @@ class Bot:
     def __init__(self):
         print("Initializing your super mega duper bot")
 
-    def interest_debris(self, target: Debris):
+    def is_in_same_quadrant(self, debris: Debris, ship: Ship, game_message: GameMessage):
+        # Determiner si les positions existent
+        if ship.worldPosition is None or debris.position is None:
+            return False
 
-        if target.debrisType == "LARGE":
-            interest = 0
-        elif target.debrisType == "MEDIUM":
-            interest = 1
-        elif target.debrisType == "SMALL":
-            interest = 2
+        # Determiner le point milieu de la map
+        demi_x = game_message.constants.world.width
+        demi_y = game_message.constants.world.height
+
+        # Etablir les quadrants du debris et du ship
+        ship_quadrant = (ship.worldPosition.x >= demi_x, ship.worldPosition.y >= demi_y)
+        debris_quadrant = (debris.position.x >= demi_x, debris.position.y >= demi_y)
+
+        # Etablir la correspondance
+        return ship_quadrant == debris_quadrant
+
+    def interest_debris(self, target: Debris, ship: Ship):
+
+        if target.debrisType == "LARGE" and self.is_in_same_quadrant(target, ship):
+            return 0
+        elif target.debrisType == "MEDIUM" and self.is_in_same_quadrant(target, ship):
+            return 3
+        elif target.debrisType == "LARGE":
+            return 6
         else:
-            interest = 3
+            return 7
 
-        return interest
 
     def interest_ship(self, target: Ship):
 
         if target.currentShield < 0:
-            interest = 0
+            return 1
         elif target.currentShield < 0.25:
-            interest = 1
+            return 2
         elif target.currentShield < 0.5:
-            interest = 2
+            return 4
         else:
-            interest = 3
-
-        return interest
+            return 5
 
     def Turret_Station_Position(self, game_message: GameMessage, team_id: str, turret_id: str):
         if team_id in game_message.shipsPositions:
