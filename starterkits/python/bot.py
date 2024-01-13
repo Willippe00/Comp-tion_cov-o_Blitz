@@ -39,6 +39,7 @@ class Bot:
         else:
             return 7
 
+
     def interest_ship(self, target: Ship):
 
         if target.currentShield < 0:
