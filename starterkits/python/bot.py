@@ -6,6 +6,18 @@ class Bot:
     def __init__(self):
         print("Initializing your super mega duper bot")
 
+    def Interest_Debris(self, target: Debris):
+
+        if target.debrisType == "LARGE":
+            interest = 3
+        elif target.debrisType == "MEDIUM":
+            interest = 2
+        elif target.debrisType == "SMALL":
+            interest = 1
+        else:
+            interest = 0
+
+        return interest
 
     def get_next_move(self, game_message: GameMessage):
         """
