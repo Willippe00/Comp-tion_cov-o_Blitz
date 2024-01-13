@@ -8,9 +8,9 @@ class Bot:
     def __init__(self):
         print("Initializing your super mega duper bot")
 
-    def get_my_ship(self, game_message: GameMessage):
-        team_id = game_message.currentTeamId
-        return game_message.ship.get(team_id)
+    def get_my_ship(self, game_message: GameMessage) -> Optional[Ship]:
+        current_team_id = game_message.currentTeamId
+        return game_message.ships.get(current_team_id)
 
     def is_in_same_quadrant(self, debris: Debris, ship: Ship, game_message: GameMessage):
         # Determiner si les positions existent
@@ -28,11 +28,12 @@ class Bot:
         # Etablir la correspondance
         return ship_quadrant == debris_quadrant
 
-    def interest_debris(self, target: Debris, ship: Ship):
+    def interest_debris(self, target: Debris, ship: Ship, game_message: GameMessage):
 
-        if target.debrisType == "LARGE" and self.is_in_same_quadrant(target, ship):
+        if target.debrisType == "LARGE" and self.is_in_same_quadrant(target, ship, game_message):
             return 0
-        elif target.debrisType == "MEDIUM" and self.is_in_same_quadrant(target, ship):
+
+        elif target.debrisType == "MEDIUM" and self.is_in_same_quadrant(target, ship, game_message):
             return 3
         elif target.debrisType == "LARGE":
             return 6
@@ -63,7 +64,7 @@ class Bot:
 
         for debris in game_message.debris:
             targets[debris.id] = {
-                'interest': self.interest_debris(debris),
+                'interest': self.interest_debris(debris, game_message),
                 'position': debris.position
             }
 
@@ -117,8 +118,7 @@ class Bot:
                 TurretChargeAction(turret_station.id),
                 # Aim the turret itself.
                 TurretLookAtAction(turret_station.id,
-                                   Vector(random.uniform(0, game_message.constants.world.width),
-                                          random.uniform(0, game_message.constants.world.height))
+                                   self.look_Target(turret_station.id, game_message)
                                    ),
 
                 # Shoot!
@@ -129,7 +129,8 @@ class Bot:
 
         operatedHelmStation = [station for station in my_ship.stations.helms if station.operator is not None]
         if operatedHelmStation:
-            actions.append(ShipRotateAction(random.uniform(0, 360)))
+           # actions.append(ShipRotateAction(random.uniform(0, 360)))
+           print("tourne")
 
         operatedRadarStation = [station for station in my_ship.stations.radars if station.operator is not None]
         for radar_station in operatedRadarStation:
@@ -138,10 +139,19 @@ class Bot:
         # You can clearly do better than the random actions above! Have fun!
         return actions
 
-    def look_Target(self, turret_id):
-
+    def look_Target(self, turret_id, game_message: GameMessage):
+        cible = None
+        cicle_indect =0
+        for debris in game_message.debris:
+            index = self.interest_debris(debris, self.get_my_ship(game_message), game_message)
+            if index > cicle_indect:
+                cible = debris
+                cicle_indect = index
+                print(index)
+        return self.AimBot(cible, game_message, turret_id)
 
     def AimBot(self, AsteroideCible: Debris, game_message: GameMessage, turret_id):
+        
         diffVitesse = self.soustractionVecteur(AsteroideCible.velocity,
                                                self.volicityApproxyMissil(AsteroideCible, game_message, turret_id))
         diffPosition = self.soustractionVecteur(
@@ -181,11 +191,10 @@ class Bot:
         return self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
 
     def volicityApproxyMissil_vers_position(self, position, game_message: GameMessage, turet_id):
+        VitesseMissile = game_message.constants.ship.stations.turretInfos[turet_id].rocketSpeed
 
-        VitesseMissile = game_message.constants.ship.stations.turretInfos[
-            self.Turret_Station_Position(game_message, game_message.currentTeamId, turet_id)].rocketSpeed
         """Version originale de la fonction pour obtenir la vélocité du missile vers une position donnée."""
-        VecteurDirection = self.soustractionVecteur(position, self.Turret_Station_Position(game_message,
+        VecteurDirection = self.soustractionVecteur(position, self.turret_station_position(game_message,
                                                                                            game_message.currentTeamId,
                                                                                            turet_id))
         longueur = self.norme(VecteurDirection)
@@ -203,9 +212,4 @@ class Bot:
         return Vector(positionAsteroide.x + vitesseAsteroide.x * delta_temps,
                       positionAsteroide.y + vitesseAsteroide.y * delta_temps)
 
-    def get_my_ship(game_message: GameMessage) -> Optional[Ship]:
-        current_team_id = game_message.currentTeamId
-        for team_id, ship in game_message.ships.items():
-            if team_id == current_team_id:
-                return ship
-        return None
+
