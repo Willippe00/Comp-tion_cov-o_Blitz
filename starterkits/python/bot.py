@@ -34,6 +34,34 @@ class Bot:
         else:
             return 7
 
+    def move2Station(self, destination: str):
+
+        idle_crewmates = [crewmate for crewmate in my_ship.crew]
+        crew2move = "err"
+        closestStation: Station
+        closestStationDist = 60
+
+        for crewmate in idle_crewmates:
+            if destination == "radars":
+                visitable_stations = crewmate.distanceFromStations.radars
+            if destination == "turrets":
+                visitable_stations = crewmate.distanceFromStations.turrets
+            if destination == "shields":
+                visitable_stations = crewmate.distanceFromStations.shields
+            if destination == "helms":
+                visitable_stations = crewmate.distanceFromStations.helms
+
+            print(visitable_stations)
+            print(crewmate.id)
+            for visitable_stations in visitable_stations:
+                print(visitable_stations.distance)
+                if visitable_stations.distance < closestStationDist:
+                    closestStation = visitable_stations
+                    closestStationDist = visitable_stations.distance
+                    crew2move = crewmate.id
+
+        station_to_move_to = closestStation
+        actions.append(CrewMoveAction(crew2move, station_to_move_to.stationPosition))
 
     def interest_ship(self, target: Ship):
 
