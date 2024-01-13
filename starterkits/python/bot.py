@@ -3,9 +3,14 @@ from game_message import *
 from actions import *
 import random
 
+
 class Bot:
     def __init__(self):
         print("Initializing your super mega duper bot")
+
+    def get_my_ship(self, game_message: GameMessage):
+        team_id = game_message.currentTeamId
+        return game_message.ship.get(team_id)
 
     def is_in_same_quadrant(self, debris: Debris, ship: Ship, game_message: GameMessage):
         # Determiner si les positions existent
@@ -34,7 +39,6 @@ class Bot:
         else:
             return 7
 
-
     def interest_ship(self, target: Ship):
 
         if target.currentShield < 0:
@@ -46,7 +50,26 @@ class Bot:
         else:
             return 5
 
-    def turret_station_position(self, game_message: GameMessage, team_id: str, turret_id: str) -> Optional[Vector]:
+    def target_priorities(self, game_message: GameMessage):
+        targets = {}
+
+        for team_id, ship in game_message.ships.items():
+            if team_id != game_message.currentTeamId:
+                targets[ship.teamId] = {
+                    'interest': self.interest_ship(ship),
+                    'position': ship.worldPosition
+                }
+
+        for debris in game_message.debris:
+            targets[debris.id] = {
+                'interest': self.interest_debris(debris),
+                'position': debris.position
+            }
+
+        sorted_targets = dict(sorted(targets.items(), key=lambda item: item[1]))
+        return sorted_targets
+
+    def turret_station_position(self, game_message: GameMessage, team_id: str, turret_id: str):
         if team_id in game_message.shipsPositions:
             team = game_message.ships.get(team_id)
 
@@ -66,7 +89,6 @@ class Bot:
         Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
         """
 
-
         actions = []
 
         team_id = game_message.currentTeamId
@@ -74,7 +96,8 @@ class Bot:
         other_ships_ids = [shipId for shipId in game_message.shipsPositions.keys() if shipId != team_id]
 
         # Find who's not doing anything and try to give them a job?
-        idle_crewmates = [crewmate for crewmate in my_ship.crew if crewmate.currentStation is None and crewmate.destination is None]
+        idle_crewmates = [crewmate for crewmate in my_ship.crew if
+                          crewmate.currentStation is None and crewmate.destination is None]
 
         for crewmate in idle_crewmates:
             visitable_stations = crewmate.distanceFromStations.shields + crewmate.distanceFromStations.turrets + crewmate.distanceFromStations.helms + crewmate.distanceFromStations.radars
@@ -88,9 +111,11 @@ class Bot:
                 # Charge the turret.
                 TurretChargeAction(turret_station.id),
                 # Aim the turret itself.
-                TurretLookAtAction(turret_station.id, 
-                                   Vector(random.uniform(0, game_message.constants.world.width), random.uniform(0, game_message.constants.world.height))
-                ),
+                TurretLookAtAction(turret_station.id,
+                                   Vector(random.uniform(0, game_message.constants.world.width),
+                                          random.uniform(0, game_message.constants.world.height))
+                                   ),
+
                 # Shoot!
                 TurretShootAction(turret_station.id)
             ]
@@ -108,37 +133,34 @@ class Bot:
         # You can clearly do better than the random actions above! Have fun!
         return actions
 
-
-
     def look_Target(self, turret_id):
 
         postion = self.AimBot(turret_id)
 
-    def AimBot(self, AsteroideCible : Debris, game_message: GameMessage, turret_id):
-            diffVitesse = self.soustractionVecteur(AsteroideCible.velocity, self.volicityApproxyMissil(AsteroideCible, game_message, turret_id))
-            diffPosition = self.soustractionVecteur(self.Turret_Station_Position(game_message, game_message.currentTeamId, turret_id), AsteroideCible.position)
-            TempsColision = self.produitScalaire(diffPosition, diffVitesse) / self.produitScalaire(diffVitesse,
-                                                                                                   diffVitesse)
+    def AimBot(self, AsteroideCible: Debris, game_message: GameMessage, turret_id):
+        diffVitesse = self.soustractionVecteur(AsteroideCible.velocity,
+                                               self.volicityApproxyMissil(AsteroideCible, game_message, turret_id))
+        diffPosition = self.soustractionVecteur(
+            self.Turret_Station_Position(game_message, game_message.currentTeamId, turret_id), AsteroideCible.position)
+        TempsColision = self.produitScalaire(diffPosition, diffVitesse) / self.produitScalaire(diffVitesse,
+                                                                                               diffVitesse)
 
-            posIntercept = self.additionVecteur(AsteroideCible.position,
-                                                self.multiplicationVecteur(AsteroideCible.velocity, TempsColision))
+        posIntercept = self.additionVecteur(AsteroideCible.position,
+                                            self.multiplicationVecteur(AsteroideCible.velocity, TempsColision))
 
-            return posIntercept
+        return posIntercept
 
+    def norme(self, v):
+        return (v.x ** 2 + v.y ** 2) ** 0.5
 
-    def norme(self,v):
-        return (v.x**2 + v.y**2)**0.5
-    def produitScalaire(self,v1, v2):
+    def produitScalaire(self, v1, v2):
         return v1.x * v2.x + v1.y * v2.y
-
 
     def soustractionVecteur(self, v1, v2):
         return Vector(v1.x - v2.x, v1.y - v2.y)
 
-
-    def additionVecteur(self,v1, v2):
+    def additionVecteur(self, v1, v2):
         return Vector(v1.x + v2.x, v1.y + v2.y)
-
 
     def multiplicationVecteur(self, v, scalaire):
         return Vector(v.x * scalaire, v.y * scalaire)
@@ -148,15 +170,20 @@ class Bot:
 
         for _ in range(70):  # 10 itérations pour convergence (ajuster si nécessaire)
             vecteur_vitesse_missile = self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
-            delta_temps = self.tempsImpact(positionEstimee, self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id), self.norme(vecteur_vitesse_missile))
+            delta_temps = self.tempsImpact(positionEstimee,
+                                           self.Turret_Station_Position(game_message, game_message.currentTeamId,
+                                                                        turet_id), self.norme(vecteur_vitesse_missile))
             positionEstimee = self.estimerPosition(AsteroideCible.position, AsteroideCible.velocity, delta_temps)
         return self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
 
     def volicityApproxyMissil_vers_position(self, position, game_message: GameMessage, turet_id):
 
-        VitesseMissile = game_message.constants.ship.stations.turretInfos[self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id)].rocketSpeed
+        VitesseMissile = game_message.constants.ship.stations.turretInfos[
+            self.Turret_Station_Position(game_message, game_message.currentTeamId, turet_id)].rocketSpeed
         """Version originale de la fonction pour obtenir la vélocité du missile vers une position donnée."""
-        VecteurDirection = self.soustractionVecteur(position, self.Turret_Station_Position(game_message,game_message.currentTeamId ,turet_id))
+        VecteurDirection = self.soustractionVecteur(position, self.Turret_Station_Position(game_message,
+                                                                                           game_message.currentTeamId,
+                                                                                           turet_id))
         longueur = self.norme(VecteurDirection)
         VecteurUnitaire = Vector(VecteurDirection.x / longueur, VecteurDirection.y / longueur)
         return Vector(VitesseMissile * VecteurUnitaire.x, VitesseMissile * VecteurUnitaire.y)
