@@ -46,28 +46,20 @@ class Bot:
         else:
             return 5
 
-    def Turret_Station_Position(self, game_message: GameMessage, team_id: str, turret_id: str):
+    def turret_station_position(self, game_message: GameMessage, team_id: str, turret_id: str) -> Optional[Vector]:
         if team_id in game_message.shipsPositions:
             team = game_message.ships.get(team_id)
 
             if team:
-                turrets = team['stations']['turrets']
+                stations_data = team.stations
+                if stations_data:
+                    turrets = stations_data.turrets
 
-                specific_turret = next((turret for turret in turrets if turret['id'] == turret_id), None)
+                    specific_turret = next((turret for turret in turrets if turret.id == turret_id), None)
 
-                if specific_turret:
-                    turret_position = specific_turret['worldPosition']
-                    return turret_position
-                else:
-                    print("Specific turret not found")
-                    return
-
-            else:
-                print("Team not found")
-                return
-        else:
-            print("Team ID not found")
-            return
+                    if specific_turret:
+                        return specific_turret.worldPosition
+        return None
 
     def get_next_move(self, game_message: GameMessage):
         """
