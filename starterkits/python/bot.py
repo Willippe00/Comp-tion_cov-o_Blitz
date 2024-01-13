@@ -19,6 +19,29 @@ class Bot:
 
         return interest
 
+    def Turret_Station_Position(self, game_message: GameMessage, team_id: str, turret_id: str):
+        if team_id in game_message.shipsPositions:
+            team = game_message.ships.get(team_id)
+
+            if team:
+                turrets = team['stations']['turrets']
+
+                specific_turret = next((turret for turret in turrets if turret['id'] == turret_id), None)
+
+                if specific_turret:
+                    turret_position = specific_turret['worldPosition']
+                    return turret_position
+                else:
+                    print("Specific turret not found")
+                    return
+
+            else:
+                print("Team not found")
+                return
+        else:
+            print("Team ID not found")
+            return
+
     def get_next_move(self, game_message: GameMessage):
         """
         Here is where the magic happens, for now the moves are not very good. I bet you can do better ;)
