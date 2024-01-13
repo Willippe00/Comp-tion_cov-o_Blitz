@@ -88,17 +88,14 @@ class Bot:
                         return specific_turret.worldPosition
         return None
 
-    def move2Station(self, destination: str, game_message: GameMessage):
-
+    def move2Stationhelms(self, destination: str, game_message: GameMessage):
         actions = []
-
         team_id = game_message.currentTeamId
         my_ship = game_message.ships.get(team_id)
         other_ships_ids = [shipId for shipId in game_message.shipsPositions.keys() if shipId != team_id]
-
         idle_crewmates = [crewmate for crewmate in my_ship.crew]
         crew2move = "err"
-        closestStation: Station
+        # closestStation: Station
         closestStationDist = 60
         # visit_station :  Station
         for crewmate in idle_crewmates:
@@ -107,16 +104,16 @@ class Bot:
                 # visit_station.id = "radars"
             if destination == "turrets":
                 visitable_stations = crewmate.distanceFromStations.turrets
-
             if destination == "shields":
                 visitable_stations = crewmate.distanceFromStations.shields
             if destination == "helms":
                 visitable_stations = crewmate.distanceFromStations.helms
-
             # print(visitable_stations)
             # print(crewmate.id)
             for visitable_stations in visitable_stations:
                 if visitable_stations == None:
+                    return None
+                if visitable_stations.distance == 0:
                     return None
                 # print(visitable_stations.distance)
                 elif (visitable_stations.distance < closestStationDist) and visitable_stations.distance > 0:
@@ -124,9 +121,8 @@ class Bot:
                     closestStationDist = visitable_stations.distance
                     crew2move = crewmate.id
                     print(visitable_stations)
-
-        station_to_move_to = closestStation
-        return CrewMoveAction(crew2move, station_to_move_to.stationPosition)
+                    station_to_move_to = closestStation
+                    return CrewMoveAction(crew2move, station_to_move_to.stationPosition)
 
     def get_next_move(self, game_message: GameMessage):
         """
