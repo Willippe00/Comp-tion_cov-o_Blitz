@@ -238,27 +238,36 @@ class Bot:
         return Vector(v.x * scalaire, v.y * scalaire)
 
     def volicityApproxyMissil(self, AsteroideCible: Debris, game_message: GameMessage, turet_id):
-        positionEstimee = AsteroideCible.position
+
+
+        positionEstimee = AsteroideCible
         print("approx missile")
         for _ in range(70):  # 10 itérations pour convergence (ajuster si nécessaire)
             vecteur_vitesse_missile = self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
             delta_temps = self.tempsImpact(positionEstimee,
                                            self.turret_station_position(game_message, game_message.currentTeamId,
                                                                         turet_id), self.norme(vecteur_vitesse_missile))
-            positionEstimee = self.estimerPosition(AsteroideCible.position, AsteroideCible.velocity, delta_temps)
+            positionEstimee = self.estimerPosition(AsteroideCible, AsteroideCible, delta_temps)
         return self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
 
     def volicityApproxyMissil_vers_position(self, position, game_message: GameMessage, turet_id):
+
         team_id = game_message.currentTeamId
-        type = None
-        if team_id in game_message.shipsPositions:
-            team = game_message.ships.get(team_id)
+        my_ship = game_message.ships.get(team_id)
+        type_spec = None
 
-            if team:
-                type = team.stations.turrets[turet_id].turretType
+        for turel  in game_message.ships.get(team_id).stations.turrets:
+            if turel.id == turet_id:
+              type_spec  = turel.turretType
+
+        team_id = game_message.currentTeamId
 
 
-        VitesseMissile = game_message.constants.ship.stations.turretInfos[type].rocketSpeed
+
+
+
+
+        VitesseMissile = game_message.constants.ship.stations.turretInfos[type_spec].rocketSpeed
 
         """Version originale de la fonction pour obtenir la vélocité du missile vers une position donnée."""
         VecteurDirection = self.soustractionVecteur(position, self.turret_station_position(game_message,
