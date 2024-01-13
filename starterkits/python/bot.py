@@ -5,6 +5,8 @@ import random
 
 
 class Bot:
+
+    TargetSte = 1
     def __init__(self):
         print("Initializing your super mega duper bot")
 
@@ -86,8 +88,45 @@ class Bot:
                         return specific_turret.worldPosition
         return None
 
+    def move2Station(self, destination: str, game_message: GameMessage):
 
+        actions = []
 
+        team_id = game_message.currentTeamId
+        my_ship = game_message.ships.get(team_id)
+        other_ships_ids = [shipId for shipId in game_message.shipsPositions.keys() if shipId != team_id]
+
+        idle_crewmates = [crewmate for crewmate in my_ship.crew]
+        crew2move = "err"
+        closestStation: Station
+        closestStationDist = 60
+        # visit_station :  Station
+        for crewmate in idle_crewmates:
+            if destination == "radars":
+                visitable_stations = crewmate.distanceFromStations.radars
+                # visit_station.id = "radars"
+            if destination == "turrets":
+                visitable_stations = crewmate.distanceFromStations.turrets
+
+            if destination == "shields":
+                visitable_stations = crewmate.distanceFromStations.shields
+            if destination == "helms":
+                visitable_stations = crewmate.distanceFromStations.helms
+
+            # print(visitable_stations)
+            # print(crewmate.id)
+            for visitable_stations in visitable_stations:
+                if visitable_stations == None:
+                    return None
+                # print(visitable_stations.distance)
+                elif (visitable_stations.distance < closestStationDist) and visitable_stations.distance > 0:
+                    closestStation = visitable_stations
+                    closestStationDist = visitable_stations.distance
+                    crew2move = crewmate.id
+                    print(visitable_stations)
+
+        station_to_move_to = closestStation
+        return CrewMoveAction(crew2move, station_to_move_to.stationPosition)
 
     def get_next_move(self, game_message: GameMessage):
         """
@@ -101,13 +140,9 @@ class Bot:
         other_ships_ids = [shipId for shipId in game_message.shipsPositions.keys() if shipId != team_id]
 
         # Find who's not doing anything and try to give them a job?
-        idle_crewmates = [crewmate for crewmate in my_ship.crew if
-                          crewmate.currentStation is None and crewmate.destination is None]
 
-        for crewmate in idle_crewmates:
-            visitable_stations = crewmate.distanceFromStations.shields + crewmate.distanceFromStations.turrets + crewmate.distanceFromStations.helms + crewmate.distanceFromStations.radars
-            station_to_move_to = random.choice(visitable_stations)
-            actions.append(CrewMoveAction(crewmate.id, station_to_move_to.stationPosition))
+
+
 
         # Now crew members at stations should do something!
         operatedTurretStations = [station for station in my_ship.stations.turrets if station.operator is not None]
@@ -135,33 +170,56 @@ class Bot:
         operatedRadarStation = [station for station in my_ship.stations.radars if station.operator is not None]
         for radar_station in operatedRadarStation:
             actions.append(RadarScanAction(radar_station.id, random.choice(other_ships_ids)))
-
+        actions.append(self.move2Station("turrets",game_message))
         # You can clearly do better than the random actions above! Have fun!
         return actions
 
     def look_Target(self, turret_id, game_message: GameMessage):
-        cible = None
-        cicle_indect =0
-        for debris in game_message.debris:
-            index = self.interest_debris(debris, self.get_my_ship(game_message), game_message)
-            if index > cicle_indect:
-                cible = debris
-                cicle_indect = index
-                print(index)
-        return self.AimBot(cible, game_message, turret_id)
+        position = None
+        if self.TargetSte == 1:
+            print("attaque débrit")
+            cible = None
+            cicle_indect =-1
+            print(game_message.debris)
+            for debris in game_message.debris:
+                index = self.interest_debris(debris, self.get_my_ship(game_message), game_message)
+                if index > cicle_indect:
+                    cible = debris
+                    cicle_indect = index
+                    print(index)
+            position = self.AimBot(cible, game_message, turret_id)
+        else:
+            print("ataque vaisseau")
 
-    def AimBot(self, AsteroideCible: Debris, game_message: GameMessage, turret_id):
-        
-        diffVitesse = self.soustractionVecteur(AsteroideCible.velocity,
-                                               self.volicityApproxyMissil(AsteroideCible, game_message, turret_id))
+        #self.TargetSte = self.TargetSte * -1
+        return position
+
+
+    def AimBot(self, AsteroideCible, game_message: GameMessage, turret_id):
+
+        print("aimbot")
+        velociter = None
+        pos = None
+        for debri in game_message.debris:
+            if debri != None:
+                velociter = debri.velocity
+                pos = debri.position
+
+        if(velociter == None):
+            return None
+        print("avant diff")
+        diffVitesse = self.soustractionVecteur(velociter,
+                                               self.volicityApproxyMissil(velociter, game_message, turret_id))
         diffPosition = self.soustractionVecteur(
-            self.Turret_Station_Position(game_message, game_message.currentTeamId, turret_id), AsteroideCible.position)
+            self.turret_station_position(game_message, game_message.currentTeamId, turret_id), pos)
         TempsColision = self.produitScalaire(diffPosition, diffVitesse) / self.produitScalaire(diffVitesse,
-                                                                                               diffVitesse)
+                                                                                      diffVitesse)
+        print("avant intercept")
 
-        posIntercept = self.additionVecteur(AsteroideCible.position,
-                                            self.multiplicationVecteur(AsteroideCible.velocity, TempsColision))
-
+        posIntercept = self.additionVecteur(pos,
+                                            self.multiplicationVecteur(velociter, TempsColision))
+        print("return pos")
+        print(posIntercept)
         return posIntercept
 
     def norme(self, v):
@@ -181,17 +239,26 @@ class Bot:
 
     def volicityApproxyMissil(self, AsteroideCible: Debris, game_message: GameMessage, turet_id):
         positionEstimee = AsteroideCible.position
-
+        print("approx missile")
         for _ in range(70):  # 10 itérations pour convergence (ajuster si nécessaire)
             vecteur_vitesse_missile = self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
             delta_temps = self.tempsImpact(positionEstimee,
-                                           self.Turret_Station_Position(game_message, game_message.currentTeamId,
+                                           self.turret_station_position(game_message, game_message.currentTeamId,
                                                                         turet_id), self.norme(vecteur_vitesse_missile))
             positionEstimee = self.estimerPosition(AsteroideCible.position, AsteroideCible.velocity, delta_temps)
         return self.volicityApproxyMissil_vers_position(positionEstimee, game_message, turet_id)
 
     def volicityApproxyMissil_vers_position(self, position, game_message: GameMessage, turet_id):
-        VitesseMissile = game_message.constants.ship.stations.turretInfos[turet_id].rocketSpeed
+        team_id = game_message.currentTeamId
+        type = None
+        if team_id in game_message.shipsPositions:
+            team = game_message.ships.get(team_id)
+
+            if team:
+                type = team.stations.turrets[turet_id].turretType
+
+
+        VitesseMissile = game_message.constants.ship.stations.turretInfos[type].rocketSpeed
 
         """Version originale de la fonction pour obtenir la vélocité du missile vers une position donnée."""
         VecteurDirection = self.soustractionVecteur(position, self.turret_station_position(game_message,
